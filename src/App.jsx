@@ -7,10 +7,25 @@ import {
   LogOut, CheckCircle, AlertCircle, Music2
 } from 'lucide-react';
 
+// --- FIREBASE IMPORTS ---
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+
 // --- 1. CONFIGURATION AREA (User Editable) ---
+
+// 🔴 TODO: Replace with your actual Firebase Config from Console
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSy...", 
+  authDomain: "your-app.firebaseapp.com",
+  projectId: "your-app",
+  storageBucket: "your-app.appspot.com",
+  messagingSenderId: "123...",
+  appId: "1:123..."
+};
+
 const APP_CONFIG = {
   name: "SurAI",
-  version: "1.1.0", // Updated version
+  version: "1.2.0",
   // VIP Whitelist: Tomar bondhuder email ekhane add koro
   vipEmails: [
     "admin@surai.com", 
@@ -18,6 +33,17 @@ const APP_CONFIG = {
     "friend@gmail.com"
   ]
 };
+
+// Initialize Firebase (Safe check)
+let auth;
+try {
+  if (FIREBASE_CONFIG.apiKey !== "AIzaSy...") {
+    const app = initializeApp(FIREBASE_CONFIG);
+    auth = getAuth(app);
+  }
+} catch (e) {
+  console.error("Firebase init error:", e);
+}
 
 const SUGGESTED_STYLES = [
   { id: 'lofi', name: 'Lofi Hip Hop', color: 'bg-indigo-600' },
@@ -40,8 +66,8 @@ const TRACK_TYPES = [
 // --- MAIN APP COMPONENT ---
 export default function SurAIApp() {
   // --- STATE ---
-  const [user, setUser] = useState(null); // { email, isPremium }
-  const [view, setView] = useState('LOGIN'); // LOGIN, HOME, GENERATE, REMIX, STUDIO
+  const [user, setUser] = useState(null); // { email, isPremium, photo }
+  const [view, setView] = useState('LOGIN'); 
   
   // Studio Data
   const [projectTitle, setProjectTitle] = useState("Untitled Project");
@@ -66,19 +92,39 @@ export default function SurAIApp() {
   const [logs, setLogs] = useState([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [geminiSuggestion, setGeminiSuggestion] = useState('');
-  const [geminiChords, setGeminiChords] = useState(''); // ✨ New State for Chords
+  const [geminiChords, setGeminiChords] = useState('');
 
-  // Long Press Logic
   const longPressTimer = useRef(null);
   const isLongPress = useRef(false);
 
   // --- ACTIONS ---
 
-  // 1. LOGIN LOGIC
-  const handleLogin = (email) => {
-    const isPremium = APP_CONFIG.vipEmails.includes(email);
-    setUser({ email, isPremium });
-    setView('HOME');
+  // 1. REAL GOOGLE LOGIN LOGIC
+  const handleGoogleLogin = async () => {
+    if (!auth) {
+      alert("⚠️ Firebase Config Missing! Please update the 'FIREBASE_CONFIG' object in the code.");
+      return;
+    }
+    
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email;
+      const photo = result.user.photoURL;
+      const isPremium = APP_CONFIG.vipEmails.includes(email);
+      
+      setUser({ email, isPremium, photo });
+      setView('HOME');
+    } catch (error) {
+      console.error(error);
+      alert("Login Failed: " + error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (auth) await signOut(auth);
+    setUser(null);
+    setView('LOGIN');
   };
 
   // 2. MOCK AI GENERATION
@@ -86,7 +132,6 @@ export default function SurAIApp() {
     if (!stylePrompt) return alert("Please specify a style!");
     setView('PROCESSING');
     
-    // Simulate Initial Generation (MusicGen + Demucs)
     const steps = [
       "Connecting to SurAI Cloud...",
       `Analyzing Style: "${stylePrompt}"...`,
@@ -104,7 +149,6 @@ export default function SurAIApp() {
       i++;
       if (i >= steps.length) {
         clearInterval(interval);
-        // Initialize Studio with some mock layers
         setLayers([
           { id: 'v1', name: 'Vocals', type: 'vocal', color: 'bg-yellow-500', volume: 80, isEmpty: false },
           { id: 'd1', name: 'Drums', type: 'drum', color: 'bg-blue-500', volume: 90, isEmpty: false },
@@ -116,28 +160,23 @@ export default function SurAIApp() {
     }, 800);
   };
 
-  // 3. GEMINI API CALL (Expanded)
+  // 3. GEMINI API CALL
   const callGemini = (mode, contextData = '') => {
     setIsAiThinking(true);
-    
-    // In a real app, you would fetch from: https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
     setTimeout(() => {
       setIsAiThinking(false);
-      
       if (mode === 'lyrics') {
         setPrompt("(Verse)\nNeon lights on Dhaka streets\nRhythm of the rain, skipping beats\n(Chorus)\nEi shohor, ei raat...");
       } 
       else if (mode === 'rhyme') {
         setGeminiSuggestion("Tomar chokher nil rong...");
       }
-      // ✨ Feature 1: Style Enhancer
       else if (mode === 'enhance_style') {
         const enhanced = contextData 
           ? `${contextData}, Cinematic atmosphere, Lo-fi texture, 90 BPM, Minor Scale` 
           : "Melancholic Lofi Beat, Rain sounds, Slow Tempo, Nostalgic Vibe";
         setStylePrompt(enhanced);
       }
-      // ✨ Feature 2: Chord Suggestion
       else if (mode === 'suggest_chords') {
         setGeminiChords("Am7 - Fmaj7 - C - G (Soulful Progression)");
       }
@@ -155,7 +194,7 @@ export default function SurAIApp() {
       setSelectedRegion({ layerId, start: 30, end: 40 });
       setPopupMenu({ x: clientX, y: clientY, layerId });
       if (navigator.vibrate) navigator.vibrate(50);
-    }, 600); // 600ms hold
+    }, 600);
   };
 
   const addNewTrack = (option) => {
@@ -165,7 +204,7 @@ export default function SurAIApp() {
       type: option.type,
       color: option.color,
       volume: 80,
-      isEmpty: true // Empty state
+      isEmpty: true
     };
     setLayers([...layers, newLayer]);
     setShowNewTrackModal(false);
@@ -183,14 +222,14 @@ export default function SurAIApp() {
   // --- RENDERERS ---
 
   if (view === 'LOGIN') return (
-    <LoginScreen onLogin={handleLogin} />
+    <LoginScreen onGoogleLogin={handleGoogleLogin} />
   );
 
   if (view === 'HOME') return (
     <HomeScreen 
       user={user} 
       onNavigate={setView} 
-      onLogout={() => setView('LOGIN')} 
+      onLogout={handleLogout} 
     />
   );
 
@@ -235,7 +274,6 @@ export default function SurAIApp() {
           <h1 className="font-bold text-sm hidden md:block">Project <span className="text-purple-400">{projectTitle}</span></h1>
         </div>
         
-        {/* Playback & Export */}
         <div className="flex items-center gap-3">
           <button onClick={() => setIsPlaying(!isPlaying)} className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:bg-gray-200">
             {isPlaying ? <Pause className="w-5 h-5 fill-current"/> : <Play className="w-5 h-5 fill-current pl-1"/>}
@@ -332,7 +370,6 @@ export default function SurAIApp() {
 
       {/* --- MODALS --- */}
       
-      {/* 1. New Track Modal */}
       {showNewTrackModal && (
         <Modal onClose={() => setShowNewTrackModal(false)} title="Add New Layer">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -346,7 +383,6 @@ export default function SurAIApp() {
         </Modal>
       )}
 
-      {/* 2. Premium Upgrade Modal */}
       {showPremiumModal && (
         <Modal onClose={() => setShowPremiumModal(false)} title="Premium Feature">
           <div className="text-center py-4">
@@ -360,7 +396,6 @@ export default function SurAIApp() {
         </Modal>
       )}
 
-      {/* 3. Regeneration Modal */}
       {showRegenModal && (
         <Modal onClose={() => setShowRegenModal(false)} title="Generate Audio">
           <p className="text-xs text-purple-400 font-bold mb-2 uppercase tracking-wide">
@@ -371,12 +406,10 @@ export default function SurAIApp() {
         </Modal>
       )}
 
-      {/* 4. Lyric Extension (SVS) Modal */}
       {showLyricModal && (
         <Modal onClose={() => setShowLyricModal(false)} title="Lyric Extension (SVS)">
           <div className="bg-gray-950 h-24 rounded border border-gray-800 mb-4 flex items-center justify-center text-gray-600 text-xs font-mono relative">
              Pitch Curve Visualization
-             {/* Gemini Chords Overlay */}
              {geminiChords && (
                <div className="absolute bottom-2 bg-purple-900/80 px-3 py-1 rounded text-xs text-purple-200 font-bold border border-purple-500/50 animate-in fade-in">
                  🎵 AI Chords: {geminiChords}
@@ -398,10 +431,9 @@ export default function SurAIApp() {
   );
 }
 
-// ... (Sub-Components remain largely same, updated GenerateSetup below) ...
+// --- SUB COMPONENTS ---
 
-function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState('');
+function LoginScreen({ onGoogleLogin }) {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
@@ -414,21 +446,15 @@ function LoginScreen({ onLogin }) {
         <h1 className="text-4xl font-bold text-white mb-2">Sur<span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">AI</span></h1>
         <p className="text-gray-400 mb-8">Next-Gen AI Music Studio</p>
 
-        <input 
-          type="email" 
-          placeholder="Enter your email" 
-          className="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white mb-4 focus:border-purple-500 outline-none transition-all"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
         <button 
-          onClick={() => email && onLogin(email)}
+          onClick={onGoogleLogin}
           className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-transform active:scale-95 flex items-center justify-center gap-2"
         >
-          Continue with Google <span className="text-xs font-normal text-gray-500">(Simulated)</span>
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="G"/>
+          Sign in with Google
         </button>
         <div className="mt-6 text-xs text-gray-500">
-           Try <b>admin@surai.com</b> for VIP access
+           VIP access is restricted to whitelisted emails.
         </div>
       </div>
     </div>
@@ -441,12 +467,16 @@ function HomeScreen({ user, onNavigate, onLogout }) {
       <div className="w-full max-w-4xl flex justify-between items-center mb-12 animate-in fade-in slide-in-from-top-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
-             <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 opacity-50"></div>
+             {user?.photo ? (
+               <img src={user.photo} alt="User" className="w-full h-full object-cover" />
+             ) : (
+               <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 opacity-50"></div>
+             )}
           </div>
           <div>
-            <h2 className="font-bold text-lg">{user.email.split('@')[0]}</h2>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${user.isPremium ? 'border-yellow-500/50 text-yellow-500 bg-yellow-500/10' : 'border-gray-700 text-gray-500'}`}>
-              {user.isPremium ? 'VIP PRO' : 'FREE TIER'}
+            <h2 className="font-bold text-lg">{user?.email?.split('@')[0]}</h2>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${user?.isPremium ? 'border-yellow-500/50 text-yellow-500 bg-yellow-500/10' : 'border-gray-700 text-gray-500'}`}>
+              {user?.isPremium ? 'VIP PRO' : 'FREE TIER'}
             </span>
           </div>
         </div>
@@ -468,6 +498,8 @@ function HomeScreen({ user, onNavigate, onLogout }) {
     </div>
   );
 }
+
+// ... (Rest of the Sub-Components: HomeCard, GenerateSetup, RemixSetup, Processing, TrackControl, Modal, TimelineRuler, MockWaveform remain exactly the same as previous) ...
 
 function HomeCard({ icon: Icon, title, desc, color, bg, onClick }) {
   return (
@@ -499,7 +531,6 @@ function GenerateSetup({ prompt, setPrompt, stylePrompt, setStylePrompt, onBack,
          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
             <div className="flex justify-between items-center mb-3">
                <label className="font-bold block text-gray-200">Target Style</label>
-               {/* ✨ AI Enhance Button */}
                <button onClick={() => onGemini('enhance_style')} className="text-[10px] bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-2 py-1 rounded-full flex items-center gap-1 hover:shadow-lg">
                  <Sparkles className="w-3 h-3" /> Enhance with AI
                </button>
@@ -598,6 +629,37 @@ function MockWaveform({ color }) {
        {[...Array(120)].map((_, i) => (
           <div key={i} className={`w-1 rounded-full ${color}`} style={{ height: `${Math.random() * 80 + 10}%` }}></div>
        ))}
+    </div>
+  );
+}
+
+function TrackControl({ layer, activeMenu, setActiveMenu, onDelete, onSVS, isPremium }) {
+  return (
+    <div className="h-24 border-b border-gray-800/50 p-2 flex flex-col justify-center relative bg-gray-900 hover:bg-gray-800 transition-colors group">
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-bold text-xs flex items-center gap-2 truncate max-w-[120px] text-gray-300 group-hover:text-white">
+          <div className={`w-2 h-2 rounded-full ${layer.color} shrink-0`}></div>
+          {layer.name}
+        </span>
+        <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === layer.id ? null : layer.id); }} className="p-1 hover:bg-gray-700 rounded text-gray-500"><MoreVertical className="w-3 h-3"/></button>
+        
+        {activeMenu === layer.id && (
+          <div className="absolute top-8 right-2 bg-gray-800 border border-gray-700 rounded shadow-xl z-50 w-48 py-1 overflow-hidden animate-in zoom-in-95">
+             {layer.type === 'vocal' && (
+               <button onClick={onSVS} className="w-full text-left px-3 py-2 text-xs hover:bg-purple-900/20 text-purple-300 font-bold flex gap-2 items-center justify-between">
+                 <span className="flex gap-2 items-center"><Edit3 className="w-3 h-3"/> Lyric Ext (SVS)</span>
+                 {!isPremium && <Lock className="w-3 h-3"/>}
+               </button>
+             )}
+             <button onClick={onDelete} className="w-full text-left px-3 py-2 text-xs hover:bg-red-900/20 text-red-400">Delete Track</button>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-1">
+         <button className="w-6 h-6 bg-gray-800 text-[10px] rounded text-gray-400 border border-gray-700 hover:text-white hover:border-gray-500 transition-all">M</button>
+         <button className="w-6 h-6 bg-gray-800 text-[10px] rounded text-gray-400 border border-gray-700 hover:text-white hover:border-gray-500 transition-all">S</button>
+         <input type="range" className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer self-center accent-purple-500" />
+      </div>
     </div>
   );
 }
