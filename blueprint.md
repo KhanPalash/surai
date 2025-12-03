@@ -1,43 +1,40 @@
-
-# SurAI Application Blueprint
+# Surai Music Collaboration App
 
 ## Overview
 
-SurAI is a next-generation AI-powered music creation studio designed for both novice and professional musicians. It leverages generative AI to help users create, remix, and produce music in a variety of styles. The application provides a seamless, intuitive, and visually rich user experience, making music production more accessible and creative.
+Surai is a real-time music collaboration application that allows users to create and share music together. It provides a simple and intuitive interface for composing music with others, with a focus on ease of use and a modern design.
 
 ## Project Outline
 
-### Core Features:
+### Styling and Design
 
-*   **AI Music Generation:** Users can generate music from text prompts, specifying style, mood, and instrumentation.
-*   **Remixing and Style Transfer:** Users can upload their own audio and transform it into different styles using AI.
-*   **Interactive Studio:** A multi-track studio environment where users can arrange, edit, and mix their generated tracks.
-*   **Gemini-Powered Assistance:** AI-driven suggestions for lyrics, rhymes, and chord progressions.
-*   **Premium Features:** Exclusive features for VIP users, including high-quality audio downloads and advanced AI tools.
+*   **CSS Framework:** Tailwind CSS
+*   **Component Library:** None (custom components)
+*   **Icons:** lucide-react
+*   **Color Palette:** Dark theme with shades of gray and blue accents.
+*   **Typography:** Sans-serif font family.
 
-### Design and Aesthetics:
+### Features
 
-*   **Theme:** A modern, dark theme with vibrant accents and a focus on clarity and usability.
-*   **Layout:** A responsive, mobile-first design that adapts to different screen sizes.
-*   **Iconography:** Utilizes the `lucide-react` library for clean and consistent icons.
-*   **Visuals:** Incorporates subtle gradients, background textures, and smooth animations to create a premium feel.
+*   **Authentication:** Google Sign-in via Firebase Authentication.
+*   **Firestore Integration:** Tracks are saved and loaded from Firestore, associated with the user's account.
+*   **Real-time Collaboration:** (Future implementation)
+*   **Studio View:** A central workspace for creating and managing music tracks.
+*   **Instrument Tracks:** Users can add tracks for different instruments (Drums, Bass, Vocals, Guitar).
+*   **New Track Modal:** A modal for selecting and adding new instrument tracks.
 
-### Implemented Features (as of last commit):
+### Implemented Changes (Current Session)
 
-*   **User Authentication:** Simulated login system with a VIP tier.
-*   **Home Screen:** Dashboard with options to create new music or remix existing audio.
-*   **Generation Setup:** UI for inputting lyrics, concepts, and style prompts.
-*   **Studio View:**
-    *   Multi-track layout with track controls.
-    *   `MockWaveform` component updated to use `lucide-react` icons for a more polished look.
-    *   Basic playback controls.
-*   **Error Resolution:** Fixed a critical bug by installing the missing `lucide-react` dependency.
-
-## Current Development Plan
-
-**Objective:** Enhance the user interface and add a new feature.
-
-**Next Steps:**
-
-1.  **Improve the `MockWaveform` component:** Instead of static icons, we will create a more dynamic and visually appealing waveform using SVG paths.
-2.  **Add a new feature:** We will implement a "recently played" or "my projects" section on the home screen to allow users to quickly access their previous work.
+*   **Project Setup:** Initialized a new React project with Vite.
+*   **Dependency Installation:** Added `firebase` and `lucide-react`.
+*   **Firebase Configuration:** Created `src/firebase.js` with placeholder credentials and Firestore initialization.
+*   **Component Creation:**
+    *   `src/components/LoginScreen.jsx`: A login screen with a "Sign in with Google" button.
+    *   `src/components/Header.jsx`: A header component with the application title and a sign-out button.
+    *   `src/components/Toolbar.jsx`: A toolbar with a button to add new tracks.
+    *   `src/components/Studio.jsx`: The main studio view to display instrument tracks.
+    *   `src/components/NewTrackModal.jsx`: A modal for adding new instrument tracks.
+*   **Utility Function:**
+    *   `src/lib/utils.js`: A utility function to get instrument icons.
+*   **Application Entry Point:**
+    *   `src/App.jsx`: The main application component that handles routing, state management, and renders all other components. It now integrates with Firestore to save and load tracks.
