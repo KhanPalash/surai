@@ -1,49 +1,35 @@
-import { useState } from 'react';
-import Header from './Header';
-import ProjectList from './ProjectList';
-import NewTrackModal from './NewTrackModal';
-import { Music, Plus } from 'lucide-react';
+import React from 'react';
 
 function Studio({ user, onSignOut }) {
-  const [projects, setProjects] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const addProject = (newProject) => {
-    setProjects([...projects, { ...newProject, id: projects.length + 1 }]);
-    setIsModalOpen(false);
-  };
+  // Determine the color of the tier badge based on the user's tier
+  const tierColor = user.tier === 'VIP PRO' ? 'bg-yellow-400 text-yellow-900' : 'bg-blue-400 text-blue-900';
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header user={user} onSignOut={onSignOut} />
-      <main className="flex-1 p-8 bg-gray-900 text-white">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">My Projects</h1>
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
+      <header className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-purple-400">SurAI Studio</h1>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="font-semibold text-lg">{user.name}</p>
+            <span className={`px-2 py-1 text-xs font-bold rounded-full ${tierColor}`}>
+              {user.tier}
+            </span>
+          </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition duration-300 ease-in-out transform hover:scale-105"
+            onClick={onSignOut} 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
           >
-            <Plus size={20}/>
-            Create New Song
+            Sign Out
           </button>
         </div>
-
-        {projects.length > 0 ? (
-          <ProjectList projects={projects} />
-        ) : (
-          <div className="text-center py-20 bg-gray-800 rounded-lg">
-            <Music size={64} className="mx-auto text-gray-500"/>
-            <h2 className="mt-4 text-2xl font-semibold">No projects yet</h2>
-            <p className="mt-2 text-gray-400">Click "Create New Song" to start your first track.</p>
-          </div>
-        )}
-
+      </header>
+      
+      {/* Main content area of the studio */}
+      <main className="text-center">
+        <h2 className="text-3xl font-bold mb-4">Welcome, {user.name}!</h2>
+        <p className="text-gray-400">This is your creative dashboard. More features coming soon!</p>
+        {/* Future components and features will go here */}
       </main>
-      <NewTrackModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onAddProject={addProject}
-      />
     </div>
   );
 }
