@@ -20,7 +20,7 @@ function Studio({ user, onSignOut }) {
         if (!response.ok) {
           setError('Backend is offline. Please start the server.');
         }
-      } catch (err) {
+      } catch {
         setError('Cannot connect to backend. Is the ngrok URL correct?');
       }
     };
